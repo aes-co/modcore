@@ -1,0 +1,7 @@
+pyrogram
+python-dotenv
+httpx
+fastapi
+uvicorn
+yt-dlp
+beautifulsoup4
