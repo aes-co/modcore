@@ -18,6 +18,12 @@ from plugins.antiflood import register as register_antiflood
 from plugins.blacklist import register as register_blacklist
 from plugins.help import register as register_help_command
 from plugins.chat_analyzer import register as register_chat_analyzer
+from plugins.tools.speedtest import register as register_speedtest
+from plugins.tools.groupinfo import register as register_group_info
+from plugins.tools.calc import register as register_calc
+from plugins.tools.id_info import register as register_id_info
+from plugins.tools.user_info import register as register_user_info
+
 
 from utils import database
 
@@ -86,7 +92,12 @@ def register_plugins():
         register_moderation,
         register_greetings,
         register_antiflood,
-        register_blacklist
+        register_blacklist,
+        register_speedtest,
+        register_calc,
+        register_groupinfo,
+        register_id_info,
+        register_user_info,
     ]
     
     for plugin in plugins:
@@ -109,7 +120,7 @@ async def start_handler(client, message):
             f"🔹 **Provider:** {app.config['ai_provider'] or 'None'}\n\n"
             "Gunakan /help untuk melihat daftar perintah lengkap.\n\n"
             "📌 **Owner:** @aesneverhere\n"
-            "💻 **GitHub:** https://github.com/aesneverhere\n"
+            "💻 **GitHub:** https://github.com/aeswnh\n"
             "☕ **Donate:** https://saweria.co/aesneverhere"
         )
         

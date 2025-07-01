@@ -1,7 +1,16 @@
 pyrogram
+tgcrypto
 python-dotenv
 httpx
 fastapi
 uvicorn
 yt-dlp
 beautifulsoup4
+qrcode[pil]
+pymongo
+lxml
+Pillow
+aiohttp
+arabic-reshaper
+python-bidi
+httpx
