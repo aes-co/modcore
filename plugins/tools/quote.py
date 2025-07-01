@@ -1,30 +1,27 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
-import textwrap
+from utils.telegram_helpers import send_log
+import logging
 
-@Client.on_message(filters.command("quote") & filters.reply)
-async def quote_message(client: Client, message: Message):
-    replied = message.reply_to_message
-    if not replied.text:
-        await message.reply_text("❗ Balas pesan teks untuk dijadikan kutipan.")
-        return
+logger = logging.getLogger(__name__)
 
-    text = replied.text
-    author = replied.from_user.first_name
+@Client.on_message(filters.command("quote"))
+async def quote_handler(client: Client, message: Message):
+    reply = message.reply_to_message
 
-    img = Image.new("RGB", (600, 300), color="#1e1e2f")
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
-    wrapped_text = textwrap.fill(text, width=50)
+    if not reply or not reply.text:
+        return await message.reply_text("❌ Balas pesan teks yang ingin dijadikan quote.")
 
-    draw.text((20, 40), wrapped_text, font=font, fill="white")
-    draw.text((20, 250), f"— {author}", font=font, fill="#999999")
+    text = reply.text
+    user = reply.from_user.mention
+    quote = f"❝ {text} ❞\n\n— {user}"
 
-    buf = BytesIO()
-    buf.name = "quote.png"
-    img.save(buf, "PNG")
-    buf.seek(0)
+    await message.reply_text(quote)
 
-    await message.reply_photo(buf, caption="🖼️ Quote dibuat dari pesan.")
+    logger.info(f"{message.from_user.id} mengutip pesan dari {reply.from_user.id}")
+    await send_log(client, message.chat.id,
+        f"**QUOTE**\n"
+        f"👤 Pengutip: {message.from_user.mention} (`{message.from_user.id}`)\n"
+        f"📨 Dari: {user} (`{reply.from_user.id}`)\n"
+        f"📝 Isi: `{text}`"
+    )

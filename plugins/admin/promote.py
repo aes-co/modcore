@@ -1,49 +1,47 @@
 from pyrogram import Client, filters
-from pyrogram.types import Message, ChatPermissions
-from utils.telegram_helpers import is_admin_or_creator, send_log
+from pyrogram.types import Message
+from pyrogram.errors import ChatAdminRequired
+from utils.telegram_helpers import send_log
 import logging
 
 logger = logging.getLogger(__name__)
 
-def register(app: Client):
+@Client.on_message(filters.command("promote") & filters.group)
+async def promote_handler(client: Client, message: Message):
+    reply = message.reply_to_message
+    chat_id = message.chat.id
+    admin = message.from_user
 
-    @app.on_message(filters.command("promote") & filters.group)
-    async def promote_user(client: Client, message: Message):
-        chat_id = message.chat.id
-        admin_id = message.from_user.id
+    if not reply:
+        return await message.reply_text("❌ Balas pesan user yang ingin di-promote.")
 
-        logger.info(f"Promote command received in {chat_id} by {admin_id}")
-
-        if not await is_admin_or_creator(client, chat_id, admin_id):
-            await message.reply_text("❌ Hanya admin yang dapat mempromosikan member.")
-            return
-
-        if not message.reply_to_message:
-            await message.reply_text("⚠️ Balas pesan pengguna yang ingin kamu jadikan admin.")
-            return
-
-        target_user = message.reply_to_message.from_user
-
-        try:
-            await client.promote_chat_member(
-                chat_id,
-                target_user.id,
-                can_change_info=True,
-                can_delete_messages=True,
-                can_invite_users=True,
-                can_restrict_members=True,
-                can_pin_messages=True,
-                can_promote_members=False
-            )
-
-            await message.reply_text(f"✅ {target_user.mention} telah dipromosikan menjadi admin.")
-            logger.info(f"User {target_user.id} dipromosikan menjadi admin di {chat_id} oleh {admin_id}")
-
-            await send_log(app, chat_id,
-                f"**PROMOTE**\n"
-                f"**User:** {target_user.mention} (`{target_user.id}`)\n"
-                f"**Admin:** {message.from_user.mention} (`{admin_id}`)\n"
-                f"**Grup:** {message.chat.title} (`{chat_id}`)")
-        except Exception as e:
-            await message.reply_text(f"❌ Gagal mempromosikan {target_user.mention}: {e}")
-            logger.error(f"Gagal promote {target_user.id} di {chat_id}: {e}")
+    target = reply.from_user
+    try:
+        await client.promote_chat_member(
+            chat_id,
+            target.id,
+            can_change_info=True,
+            can_post_messages=True,
+            can_edit_messages=True,
+            can_delete_messages=True,
+            can_invite_users=True,
+            can_restrict_members=True,
+            can_pin_messages=True,
+            can_promote_members=False,
+            can_manage_video_chats=True,
+            can_manage_chat=True
+        )
+        await message.reply_text(f"✅ {target.mention} telah dipromosikan sebagai admin.")
+        logger.info(f"{admin.id} promote {target.id} di grup {chat_id}")
+        await send_log(client, chat_id,
+            f"**PROMOTE**
+"
+            f"👤 Admin: {admin.mention} (`{admin.id}`)
+"
+            f"👥 Target: {target.mention} (`{target.id}`)
+"
+            f"📍 Grup: {message.chat.title} (`{chat_id}`)"
+        )
+    except ChatAdminRequired:
+        await message.reply_text("❌ Bot tidak memiliki izin yang cukup untuk promote.")
+        logger.warning(f"Promote gagal: tidak cukup izin di {chat_id}")

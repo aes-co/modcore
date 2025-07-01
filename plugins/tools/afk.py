@@ -1,42 +1,40 @@
+import time
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from utils.database import set_afk, remove_afk, get_afk
-import time
+from utils.database import set_afk, get_afk, clear_afk
+from utils.telegram_helpers import send_log
+import logging
 
-@Client.on_message(filters.command("afk") & filters.group)
-async def set_afk_command(client: Client, message: Message):
-    reason = " ".join(message.command[1:]) or "Tidak ada alasan"
-    user_id = message.from_user.id
-    since = int(time.time())
+logger = logging.getLogger(__name__)
 
-    set_afk(user_id, reason, since)
-    await message.reply_text(f"✅ Kamu sekarang sedang AFK.\n📝 Alasan: {reason}")
+@Client.on_message(filters.command("afk"))
+async def afk_handler(client: Client, message: Message):
+    reason = message.text.split(None, 1)[1] if len(message.command) > 1 else "Tidak ada alasan"
+    await set_afk(message.from_user.id, reason)
+    await message.reply_text(f"🔕 Kamu sekarang AFK.\n📄 Alasan: `{reason}`")
 
-@Client.on_message(filters.group & filters.text)
-async def handle_mentions(client: Client, message: Message):
-    if not message.entities:
-        return
+    logger.info(f"User {message.from_user.id} masuk mode AFK. Alasan: {reason}")
+    await send_log(client, message.chat.id,
+        f"**AFK Aktif**\n"
+        f"👤 User: {message.from_user.mention} (`{message.from_user.id}`)\n"
+        f"📝 Alasan: `{reason}`"
+    )
 
-    for ent in message.entities:
-        if ent.type in ("mention", "text_mention") and ent.user:
-            target_id = ent.user.id
-            afk_data = get_afk(target_id)
-            if afk_data:
-                reason = afk_data["reason"]
-                since = afk_data["since"]
-                delta = int(time.time()) - since
-                hours, rem = divmod(delta, 3600)
-                minutes, _ = divmod(rem, 60)
-                await message.reply_text(
-                    f"💤 {ent.user.mention} sedang AFK.\n"
-                    f"📝 Alasan: {reason}\n"
-                    f"⏱️ Sejak: {hours} jam {minutes} menit yang lalu."
-                )
-                break
+@Client.on_message(filters.private | filters.group)
+async def check_afk(client: Client, message: Message):
+    if message.reply_to_message and message.reply_to_message.from_user:
+        target_id = message.reply_to_message.from_user.id
+        afk = await get_afk(target_id)
+        if afk:
+            await message.reply_text(f"💤 User ini sedang AFK.\n📄 Alasan: `{afk['reason']}`")
 
-@Client.on_message(filters.group & filters.text)
-async def clear_afk_if_needed(client: Client, message: Message):
-    user_id = message.from_user.id
-    if get_afk(user_id):
-        remove_afk(user_id)
-        await message.reply_text("✅ Status AFK kamu telah dihapus. Selamat datang kembali!")
+    if message.from_user:
+        if await get_afk(message.from_user.id):
+            await clear_afk(message.from_user.id)
+            await message.reply_text("✅ Welcome back! Status AFK kamu sudah dihapus.")
+
+            logger.info(f"User {message.from_user.id} kembali dari AFK.")
+            await send_log(client, message.chat.id,
+                f"**AFK Selesai**\n"
+                f"👤 User: {message.from_user.mention} (`{message.from_user.id}`)"
+            )

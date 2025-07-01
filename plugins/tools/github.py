@@ -1,31 +1,44 @@
+import httpx
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import httpx
+from utils.telegram_helpers import send_log
+import logging
 
-@Client.on_message(filters.command("github") & filters.private)
+logger = logging.getLogger(__name__)
+
+GITHUB_API_URL = "https://api.github.com/users/"
+
+@Client.on_message(filters.command("github"))
 async def github_lookup(client: Client, message: Message):
     if len(message.command) < 2:
-        return await message.reply_text("❗ Gunakan: `/github user/repo`", quote=True)
+        return await message.reply_text("❌ Kirim seperti ini:\n`/github username`", quote=True)
 
-    repo = message.command[1]
-    url = f"https://api.github.com/repos/{repo}"
+    username = message.text.split(None, 1)[1]
+    url = GITHUB_API_URL + username
 
     try:
-        async with httpx.AsyncClient() as client_http:
-            r = await client_http.get(url)
-            if r.status_code == 404:
-                return await message.reply_text("❌ Repo tidak ditemukan.")
-            data = r.json()
+        async with httpx.AsyncClient() as http:
+            resp = await http.get(url)
+            if resp.status_code != 200:
+                return await message.reply_text("⚠️ Username tidak ditemukan.")
 
-        reply = (
-            f"📦 **{data['full_name']}**\n"
-            f"📝 {data['description']}\n\n"
-            f"⭐ Stars: `{data['stargazers_count']}`\n"
-            f"🍴 Forks: `{data['forks_count']}`\n"
-            f"📅 Updated: `{data['updated_at']}`\n"
-            f"🔗 [Repo Link]({data['html_url']})"
-        )
+            data = resp.json()
+            text = (
+                f"👤 **{data.get('name', username)}** (`@{username}`)\n"
+                f"📍 Lokasi: `{data.get('location', 'Tidak tersedia')}`\n"
+                f"📦 Repositori Publik: `{data.get('public_repos', 0)}`\n"
+                f"👥 Pengikut: `{data.get('followers', 0)}` | Mengikuti: `{data.get('following', 0)}`\n"
+                f"🔗 [Profil GitHub]({data.get('html_url')})"
+            )
+            await message.reply_text(text)
 
-        await message.reply_text(reply, disable_web_page_preview=True)
+            logger.info(f"User {message.from_user.id} cari GitHub: {username}")
+            await send_log(client, message.chat.id,
+                f"**GITHUB LOOKUP**\n"
+                f"👤 User: {message.from_user.mention} (`{message.from_user.id}`)\n"
+                f"🔍 Username: `{username}`"
+            )
+
     except Exception as e:
-        await message.reply_text("❌ Gagal mengambil data dari GitHub.")
+        logger.error(f"Error GitHub lookup oleh {message.from_user.id}: {e}")
+        await message.reply_text("❌ Terjadi kesalahan saat mengambil data GitHub.")

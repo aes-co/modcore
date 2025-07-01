@@ -1,28 +1,33 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from utils.telegram_helpers import is_admin_or_creator
+from utils.telegram_helpers import send_log
+import logging
 
-def register(app: Client):
-    @app.on_message(filters.command("userinfo") & filters.group)
-    async def user_info_handler(client: Client, message: Message):
-        chat_id = message.chat.id
-        sender_id = message.from_user.id
+logger = logging.getLogger(__name__)
 
-        # Check admin
-        if not await is_admin_or_creator(client, chat_id, sender_id):
-            await message.reply_text("❌ Hanya admin yang dapat menggunakan perintah ini.")
-            return
+@Client.on_message(filters.command("userinfo"))
+async def userinfo_handler(client: Client, message: Message):
+    reply = message.reply_to_message
+    user = reply.from_user if reply else message.from_user
 
-        # Target user
-        target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+    mention = user.mention
+    username = f"@{user.username}" if user.username else "Tidak tersedia"
+    full_name = user.first_name
+    if user.last_name:
+        full_name += f" {user.last_name}"
 
-        info_text = (
-            f"👤 **User Info**\n"
-            f"• **Nama:** {target.first_name or '-'}\n"
-            f"• **Username:** @{target.username if target.username else '-'}\n"
-            f"• **ID:** `{target.id}`\n"
-            f"• **Bot:** {'Ya' if target.is_bot else 'Tidak'}\n"
-            f"• **Bahasa:** `{target.language_code or 'unknown'}`"
-        )
+    text = (
+        f"👤 **Informasi Pengguna**\n"
+        f"📌 Nama: `{full_name}`\n"
+        f"🆔 ID: `{user.id}`\n"
+        f"🔗 Username: `{username}`\n"
+        f"🤖 Bot?: `{user.is_bot}`"
+    )
+    await message.reply_text(text)
 
-        await message.reply_text(info_text)
+    logger.info(f"{message.from_user.id} melihat info user {user.id}")
+    await send_log(client, message.chat.id,
+        f"**USER INFO**\n"
+        f"👤 Peminta: {message.from_user.mention} (`{message.from_user.id}`)\n"
+        f"🔍 Target: {mention} (`{user.id}`)"
+    )

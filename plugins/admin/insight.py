@@ -1,53 +1,41 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from collections import defaultdict
-from datetime import datetime
+from utils.telegram_helpers import send_log
+import logging
 
-activity_count = defaultdict(int)
-user_activity = defaultdict(lambda: defaultdict(int))  # {chat_id: {user_id: count}}
-
-@Client.on_message(filters.group & filters.text)
-async def count_insight(client: Client, message: Message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    hour = datetime.now().strftime("%H")
-
-    activity_count[(chat_id, hour)] += 1
-    user_activity[chat_id][user_id] += 1
+logger = logging.getLogger(__name__)
 
 @Client.on_message(filters.command("insight") & filters.group)
-async def show_insight(client: Client, message: Message):
-    chat_id = message.chat.id
+async def insight_handler(client: Client, message: Message):
+    chat = message.chat
+    chat_id = chat.id
+
     try:
-        chat = await client.get_chat(chat_id)
-        member_count = chat.members_count
-    except:
-        member_count = "?"
+        members_count = await client.get_chat_members_count(chat_id)
+        admins = await client.get_chat_members(chat_id, filter="administrators")
+        bots = 0
+        async for m in client.get_chat_members(chat_id):
+            if m.user.is_bot:
+                bots += 1
 
-    # top user
-    activity = user_activity.get(chat_id, {})
-    if activity:
-        top_id = max(activity, key=activity.get)
-        top_count = activity[top_id]
-        try:
-            top_user = await client.get_users(top_id)
-            top_name = top_user.mention
-        except:
-            top_name = f"`{top_id}`"
-    else:
-        top_name = "Belum ada"
-        top_count = 0
+        text = (
+            f"📊 **Insight Grup**\n"
+            f"🏷️ Nama Grup: {chat.title}\n"
+            f"🆔 ID Grup: `{chat.id}`\n"
+            f"👥 Jumlah Anggota: `{members_count}`\n"
+            f"🛡️ Jumlah Admin: `{len(list(admins))}`\n"
+            f"🤖 Jumlah Bot: `{bots}`"
+        )
+        await message.reply_text(text)
 
-    # jam sibuk
-    jam_data = {
-        hour: activity_count.get((chat_id, hour), 0)
-        for hour in [f"{i:02d}" for i in range(24)]
-    }
-    busiest = max(jam_data, key=jam_data.get) if any(jam_data.values()) else "-"
+        logger.info(f"{message.from_user.id} meminta insight grup {chat_id}")
+        await send_log(client, chat_id,
+            f"**GROUP INSIGHT**\n"
+            f"👤 User: {message.from_user.mention} (`{message.from_user.id}`)\n"
+            f"📍 Grup: {chat.title} (`{chat_id}`)\n"
+            f"👥 Anggota: {members_count}, Admin: {len(list(admins))}, Bot: {bots}"
+        )
 
-    await message.reply_text(
-        f"📈 **Insight Grup**\n"
-        f"👥 Total Member: `{member_count}`\n"
-        f"🔥 User Teraktif: {top_name} (`{top_count}` pesan)\n"
-        f"🕓 Jam Tersibuk: `{busiest}:00`\n"
-    )
+    except Exception as e:
+        await message.reply_text("❌ Gagal mengambil insight grup.")
+        logger.error(f"Insight gagal di {chat_id}: {e}")

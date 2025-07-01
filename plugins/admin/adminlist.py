@@ -1,39 +1,35 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram.enums import ChatMemberStatus
 import logging
+from utils.telegram_helpers import send_log
 
 logger = logging.getLogger(__name__)
 
-def register(app: Client):
+@Client.on_message(filters.command("adminlist") & filters.group)
+async def adminlist_handler(client: Client, message: Message):
+    chat_id = message.chat.id
+    chat_title = message.chat.title
 
-    @app.on_message(filters.command("admins") & filters.group)
-    async def list_admins(client: Client, message: Message):
-        chat_id = message.chat.id
-        from_user = message.from_user
+    try:
+        admins = await client.get_chat_members(chat_id, filter="administrators")
+        admin_text = "**👮 Daftar Admin Grup:**\n\n"
 
-        logger.info(f"/admins requested by {from_user.id} in group {chat_id}")
+        for admin in admins:
+            user = admin.user
+            name = user.mention
+            if admin.status == "creator":
+                admin_text += f"👑 {name} (Pemilik)\n"
+            else:
+                admin_text += f"• {name}\n"
 
-        try:
-            members = await client.get_chat_members(chat_id, filter="administrators")
-            admin_list = []
-            for member in members:
-                user = member.user
-                if user.is_deleted:
-                    name = "🪦 [Akun Terhapus]"
-                elif user.username:
-                    name = f"@{user.username}"
-                else:
-                    name = user.first_name
-                status = "👑" if member.status == ChatMemberStatus.OWNER else "🔧"
-                admin_list.append(f"{status} {name} (`{user.id}`)")
+        await message.reply_text(admin_text)
 
-            if not admin_list:
-                await message.reply_text("❌ Tidak ada admin ditemukan.")
-                return
-
-            text = "**👮 Daftar Admin Grup:**\n\n" + "\n".join(admin_list)
-            await message.reply_text(text)
-        except Exception as e:
-            await message.reply_text(f"❌ Gagal mengambil daftar admin: {e}")
-            logger.error(f"Gagal mengambil admin list di grup {chat_id}: {e}")
+        logger.info(f"{message.from_user.id} meminta daftar admin di grup {chat_id}")
+        await send_log(client, chat_id,
+            f"**ADMIN LIST**\n"
+            f"👤 Peminta: {message.from_user.mention} (`{message.from_user.id}`)\n"
+            f"📌 Grup: {chat_title} (`{chat_id}`)"
+        )
+    except Exception as e:
+        logger.error(f"Error adminlist di grup {chat_id}: {e}")
+        await message.reply_text("❌ Gagal mengambil daftar admin.")

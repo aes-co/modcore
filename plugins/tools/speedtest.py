@@ -1,41 +1,42 @@
-import logging
+import speedtest
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import speedtest
-from utils.telegram_helpers import is_admin_or_creator
+from utils.telegram_helpers import send_log
+import logging
+import time
 
 logger = logging.getLogger(__name__)
 
-def register(app: Client):
-    @app.on_message(filters.command("speedtest") & (filters.private | filters.group))
-    async def run_speedtest(client: Client, message: Message):
-        chat_id = message.chat.id
-        user_id = message.from_user.id
+@Client.on_message(filters.command("speedtest"))
+async def speedtest_handler(client: Client, message: Message):
+    start = time.time()
+    await message.reply_text("🔄 Sedang melakukan speedtest...")
 
-        if message.chat.type in ["group", "supergroup"]:
-            if not await is_admin_or_creator(client, chat_id, user_id):
-                await message.reply_text("❌ Hanya admin yang bisa menjalankan perintah ini di grup.")
-                return
+    try:
+        st = speedtest.Speedtest()
+        st.get_best_server()
+        download_speed = st.download()
+        upload_speed = st.upload()
+        end = time.time()
 
-        logger.info(f"Speedtest command by {user_id} in chat {chat_id}")
+        result = (
+            f"📡 **Hasil Speedtest**\n"
+            f"⬇️ Download: `{download_speed / 1024 / 1024:.2f} Mbps`\n"
+            f"⬆️ Upload: `{upload_speed / 1024 / 1024:.2f} Mbps`\n"
+            f"⏱️ Ping: `{st.results.ping} ms`\n"
+            f"🕒 Waktu: `{end - start:.2f} detik`"
+        )
+        await message.reply_text(result)
 
-        sent = await message.reply_text("🔄 Sedang menjalankan speedtest, mohon tunggu...")
+        logger.info(f"{message.from_user.id} menjalankan speedtest")
+        await send_log(client, message.chat.id,
+            f"**SPEEDTEST**\n"
+            f"👤 User: {message.from_user.mention} (`{message.from_user.id}`)\n"
+            f"📡 Download: `{download_speed / 1024 / 1024:.2f} Mbps`\n"
+            f"📤 Upload: `{upload_speed / 1024 / 1024:.2f} Mbps`\n"
+            f"🏓 Ping: `{st.results.ping} ms`"
+        )
 
-        try:
-            st = speedtest.Speedtest()
-            st.get_best_server()
-            download = st.download()
-            upload = st.upload()
-            ping = st.results.ping
-
-            result = (
-                f"📊 **Hasil Speedtest**\n"
-                f"🏓 **Ping:** `{ping:.2f} ms`\n"
-                f"📥 **Download:** `{download / 1024 / 1024:.2f} Mbps`\n"
-                f"📤 **Upload:** `{upload / 1024 / 1024:.2f} Mbps`\n"
-            )
-            await sent.edit_text(result)
-            logger.info(f"Speedtest result for {user_id}:\nPing: {ping:.2f}ms, DL: {download:.2f}, UL: {upload:.2f}")
-        except Exception as e:
-            await sent.edit_text(f"❌ Gagal menjalankan speedtest: {e}")
-            logger.error(f"Speedtest failed: {e}")
+    except Exception as e:
+        await message.reply_text(f"❌ Speedtest gagal: {e}")
+        logger.error(f"Speedtest error oleh {message.from_user.id}: {e}")

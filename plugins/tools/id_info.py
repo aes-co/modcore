@@ -1,17 +1,35 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from utils.telegram_helpers import send_log
+import logging
 
-def register(app: Client):
-    @app.on_message(filters.command("id") & filters.group)
-    async def id_info_handler(client: Client, message: Message):
-        user = message.from_user
-        chat = message.chat
-        reply = message.reply_to_message
+logger = logging.getLogger(__name__)
 
-        text = f"👤 **User ID:** `{user.id}`\n💬 **Chat ID:** `{chat.id}`"
+@Client.on_message(filters.command("id"))
+async def id_handler(client: Client, message: Message):
+    user = message.from_user
+    reply = message.reply_to_message
 
-        if reply:
-            replied_user = reply.from_user
-            text += f"\n📌 **Replied User ID:** `{replied_user.id}`\n📝 **Message ID:** `{reply.id}`"
+    if reply:
+        target = reply.from_user
+        user_id = target.id
+        mention = target.mention
+    else:
+        user_id = user.id
+        mention = user.mention
 
-        await message.reply_text(text)
+    chat_id = message.chat.id
+    text = (
+        f"🆔 **ID Info**\n"
+        f"👤 User: {mention}\n"
+        f"🧾 User ID: `{user_id}`\n"
+        f"💬 Chat ID: `{chat_id}`"
+    )
+    await message.reply_text(text)
+
+    logger.info(f"{user.id} mengecek ID (target: {user_id})")
+    await send_log(client, chat_id,
+        f"**ID CHECK**\n"
+        f"👤 User: {mention} (`{user_id}`)\n"
+        f"📍 Chat ID: `{chat_id}`"
+    )

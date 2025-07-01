@@ -1,49 +1,34 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from utils.telegram_helpers import send_log
 import logging
-from utils.telegram_helpers import is_admin_or_creator, send_log
 
 logger = logging.getLogger(__name__)
 
-def register(app: Client):
+@Client.on_message(filters.command("purge") & filters.group)
+async def purge_handler(client: Client, message: Message):
+    if not message.reply_to_message:
+        return await message.reply_text("❌ Balas pesan awal yang ingin dihapus.")
 
-    @app.on_message(filters.command("purge") & filters.group)
-    async def purge_messages(client: Client, message: Message):
-        chat_id = message.chat.id
-        admin_id = message.from_user.id
+    start_msg_id = message.reply_to_message.id
+    end_msg_id = message.id
 
-        logger.info(f"Purge command received in group {chat_id} by {admin_id}")
-
-        if not await is_admin_or_creator(client, chat_id, admin_id):
-            await message.reply_text("❌ Hanya admin yang dapat menggunakan perintah ini.")
-            return
-
-        if not message.reply_to_message:
-            await message.reply_text("❌ Balas pesan pertama yang ingin kamu hapus massal.\n\nGunakan: `/purge` sebagai balasan.")
-            return
-
+    deleted = 0
+    for msg_id in range(start_msg_id, end_msg_id):
         try:
-            deleted = 0
-            start_id = message.reply_to_message.id
-            end_id = message.id
+            await client.delete_messages(message.chat.id, msg_id)
+            deleted += 1
+        except:
+            continue
 
-            for msg_id in range(start_id, end_id):
-                try:
-                    await client.delete_messages(chat_id, msg_id)
-                    deleted += 1
-                except Exception:
-                    pass  # continue even if some messages can't be deleted
-
-            await message.reply_text(f"🧹 Berhasil menghapus `{deleted}` pesan.")
-            logger.info(f"{deleted} messages purged in group {chat_id} by {admin_id}")
-
-            await send_log(app, chat_id,
-                f"**PURGE**\n"
-                f"**Admin:** {message.from_user.mention} (`{admin_id}`)\n"
-                f"**Grup:** {message.chat.title} (`{chat_id}`)\n"
-                f"**Jumlah Pesan Dihapus:** {deleted}"
-            )
-
-        except Exception as e:
-            await message.reply_text(f"❌ Gagal menghapus pesan: {e}")
-            logger.error(f"Gagal melakukan purge di grup {chat_id} oleh {admin_id}: {e}")
+    await message.reply_text(f"✅ {deleted} pesan berhasil dihapus.")
+    logger.info(f"{message.from_user.id} purge {deleted} pesan di grup {message.chat.id}")
+    await send_log(client, message.chat.id,
+        f"**PURGE**
+"
+        f"👤 Admin: {message.from_user.mention} (`{message.from_user.id}`)
+"
+        f"📍 Grup: {message.chat.title} (`{message.chat.id}`)
+"
+        f"🧹 Jumlah: {deleted} pesan"
+    )

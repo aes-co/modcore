@@ -1,41 +1,38 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from utils.database import get_all_users  # fungsi ini ambil semua user_id
+from utils.telegram_helpers import send_log
 import logging
 import asyncio
 
 logger = logging.getLogger(__name__)
 
-def register(app: Client):
+@Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))  # pastikan OWNER_ID sudah didefinisikan
+async def broadcast_handler(client: Client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Kirim seperti ini:\n`/broadcast isi pesannya`", quote=True)
 
-    @app.on_message(filters.command("broadcast") & filters.private)
-    async def broadcast_command(client: Client, message: Message):
-        sender_username = message.from_user.username
-        bot_owner_username = app.config.get("username")
+    text = message.text.split(None, 1)[1]
+    users = await get_all_users()
+    success = failed = 0
 
-        if not sender_username or sender_username.lower() != bot_owner_username.lower():
-            await message.reply_text("❌ Hanya owner bot yang dapat menggunakan perintah ini.")
-            return
+    await message.reply_text(f"📢 Mengirim pesan ke {len(users)} pengguna...")
 
-        if len(message.command) < 2:
-            await message.reply_text("Gunakan: `/broadcast [pesan]`")
-            return
+    for user_id in users:
+        try:
+            await client.send_message(user_id, text)
+            success += 1
+            await asyncio.sleep(0.1)
+        except Exception:
+            failed += 1
 
-        text_to_broadcast = message.text.split(None, 1)[1]
-        sent_count = 0
-        failed_count = 0
+    await message.reply_text(f"✅ Selesai!\nBerhasil: {success}\nGagal: {failed}")
 
-        await message.reply_text("🔄 Menyiarkan pesan...")
-
-        async for dialog in client.get_dialogs():
-            chat = dialog.chat
-            if chat.type in ("group", "supergroup"):
-                try:
-                    await client.send_message(chat.id, text_to_broadcast)
-                    sent_count += 1
-                    await asyncio.sleep(0.3)  # Hindari limit
-                except Exception as e:
-                    logger.warning(f"Gagal broadcast ke {chat.title} ({chat.id}): {e}")
-                    failed_count += 1
-
-        logger.info(f"Broadcast selesai: Berhasil {sent_count}, Gagal {failed_count}")
-        await message.reply_text(f"✅ Broadcast selesai.\n\n🟢 Berhasil: {sent_count}\n🔴 Gagal: {failed_count}")
+    logger.info(f"Broadcast oleh {message.from_user.id}. Sukses: {success}, Gagal: {failed}")
+    await send_log(client, message.chat.id,
+        f"**BROADCAST**\n"
+        f"👮 Admin: {message.from_user.mention} (`{message.from_user.id}`)\n"
+        f"📝 Isi: `{text}`\n"
+        f"✅ Berhasil: {success}\n"
+        f"❌ Gagal: {failed}"
+    )
