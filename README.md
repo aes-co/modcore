@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/aeswnh/modcore"><img src="https://img.shields.io/github/stars/aeswnh/modcore?style=flat-square&color=yellow" alt="Stars"/></a>
-  <a href="https://github.com/aeswnh/modcore/fork"><img src="https://img.shields.io/github/forks/aeswnh/modcore?style=flat-square&color=orange" alt="Forks"/></a>
-  <a href="https://github.com/aeswnh/modcore"><img src="https://img.shields.io/github/repo-size/aeswnh/modcore?style=flat-square&color=green" alt="Repo Size"/></a>
+  <a href="https://github.com/aes-co/modcore"><img src="https://img.shields.io/github/stars/aes-co/modcore?style=flat-square&color=yellow" alt="Stars"/></a>
+  <a href="https://github.com/aes-co/modcore/fork"><img src="https://img.shields.io/github/forks/aes-co/modcore?style=flat-square&color=orange" alt="Forks"/></a>
+  <a href="https://github.com/aes-co/modcore"><img src="https://img.shields.io/github/repo-size/aes-co/modcore?style=flat-square&color=green" alt="Repo Size"/></a>
   <img src="https://img.shields.io/badge/Python-3.10+-blue?style=flat-square" alt="Python Version"/>
   <img src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square" alt="License"/>
   <img src="https://img.shields.io/badge/Maintained-Yes-brightgreen?style=flat-square" alt="Maintained"/>
@@ -32,7 +32,7 @@
 * 🔹 **Plugin Modular** — Tambah, hapus, atau modifikasi fitur dengan mudah.
 * 🤖 **AI Support** — Terhubung dengan OpenRouter, Ollama, HuggingFace.
 * ⚡️ **Command Utility Lengkap** — Tools harian, moderasi, analitik.
-* 📅 **Auto-setup .env** — Tidak perlu repot setup manual.
+* 🗕️ **Auto-setup .env** — Tidak perlu repot setup manual.
 * 🎓 **Struktur bersih** — Terorganisir dan mudah dikembangkan.
 
 ---
@@ -40,7 +40,7 @@
 ## 🔧 Instalasi Cepat
 
 ```bash
-git clone https://github.com/aeswnh/modcore && cd modcore
+git clone https://github.com/aes-co/modcore && cd modcore
 bash setup.sh
 ```
 
@@ -48,7 +48,7 @@ Masukkan konfigurasi `.env` saat diminta oleh terminal.
 
 ---
 
-## 🧨 Register Bot via BotFather
+## 💎 Register Bot via BotFather
 
 1. Buka [@BotFather](https://t.me/BotFather)
 2. Jalankan `/newbot`, masukkan nama dan username bot.
@@ -73,7 +73,7 @@ modcore/
 
 ---
 
-## 📈 Daftar Fitur (Perintah)
+## 📊 Daftar Fitur (Perintah)
 
 ### 🚧 Admin Tools
 
@@ -100,7 +100,7 @@ modcore/
 ### 🧠 AI Tools *(jika diaktifkan)*
 
 * `/ask <pertanyaan>` — AI tanya jawab
-* `/image <prompt>` — AI image generator
+* `/imagen <prompt>` — AI image generator
 * `/deepsearch` — AI-powered search
 
 ---
@@ -178,10 +178,12 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 ---
 
-## 📆 Lisensi
+## 🗓️ Lisensi
 
 Proyek ini berlisensi **MIT**. Bebas digunakan, dimodifikasi, dan didistribusikan dengan atribusi yang tepat.
 
 ---
 
-<p align="center">Made with ❤️ by <a href="https://t.me/aesneverhere">@aesneverhere</a></p>
+<p align="center">
+  <i>Made with ❤️ by <a href="https://t.me/aesneverhere">@aes-co</a></i>
+</p>
